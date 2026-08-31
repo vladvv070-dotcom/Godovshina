@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Квест-календарь годовщины</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="ambient" aria-hidden="true">
+    <div class="ambient-orb ambient-orb--sapphire"></div>
+    <div class="ambient-orb ambient-orb--magenta"></div>
+    <div class="ambient-orb ambient-orb--gold"></div>
+    <div class="ambient-grid"></div>
+  </div>
+
+  <div class="app">
+    <header class="app-header">
+      <p class="app-eyebrow">Годовой цикл</p>
+      <div class="cycle-switch">
+        <button class="cycle-arrow cycle-arrow--prev" id="prevCycle" aria-label="Предыдущий цикл">
+          <svg viewBox="0 0 24 24" width="22" height="22"><path d="M15 4L7 12L15 20" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <h1 class="cycle-title" id="cycleTitle">2026&nbsp;&mdash;&nbsp;2027</h1>
+        <button class="cycle-arrow cycle-arrow--next" id="nextCycle" aria-label="Следующий цикл">
+          <svg viewBox="0 0 24 24" width="22" height="22"><path d="M9 4L17 12L9 20" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="cycles-viewport" id="cyclesViewport">
+      <div class="quest-row" id="questGrid">
+        <!-- Карточки генерируются скриптом script.js -->
+      </div>
+    </main>
+  </div>
+
+  <!-- Полноэкранная iOS-стеклянная модалка -->
+  <div class="quest-modal" id="questModal" aria-hidden="true">
+    <div class="quest-modal__backdrop" id="questModalBackdrop"></div>
+    <div class="quest-modal__panel" role="dialog" aria-modal="true" aria-labelledby="questModalTitle">
+      <button class="quest-modal__close" id="questModalClose" aria-label="Закрыть">
+        <svg viewBox="0 0 24 24" width="22" height="22"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+
+      <div class="quest-modal__content">
+        <div class="quest-modal__header">
+          <p class="quest-modal__eyebrow" id="questModalEyebrow">Карточка квеста</p>
+          <h2 class="quest-modal__title" id="questModalTitle">23 сентября</h2>
+          <div class="quest-modal__status-badge" id="questModalStatusBadge">Скоро</div>
+        </div>
+
+        <div class="quest-modal__body" id="questModalBody">
+          <!-- Стандартный контент-заглушка -->
+          <div class="quest-modal__liquid-card" id="questModalDefaultCard">
+            <div class="quest-modal__badge-ring">
+              <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.8">
+                <rect x="3" y="4" width="18" height="18" rx="3" ry="3"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+            </div>
+            <p class="quest-modal__text" id="questModalText">
+              Задание для этой даты станет доступно в день наступления события. Желаем огромного успеха!
+            </p>
+          </div>
+        </div>
+
+        <div class="quest-modal__footer" id="questModalFooter">
+          <button class="quest-modal__complete" id="questModalComplete">
+            Отметить пройденным
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
