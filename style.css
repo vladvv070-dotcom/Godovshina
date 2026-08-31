@@ -276,35 +276,89 @@ html, body{
 
 /* ---------- SEPTEMBER QUEST ---------- */
 .quest-sept-container { width: 100%; position: relative; z-index: 1; }
-.quest-sept-step { display: none; text-align: center; }
-.quest-sept-step.is-active { display: block; animation: fade-in 0.4s ease forwards; }
-@keyframes fade-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+.quest-sept-step { display: none; text-align: center; transition: opacity 0.4s var(--ease-liquid), transform 0.4s var(--ease-liquid); }
+.quest-sept-step.is-active { display: block; animation: fade-in-step 0.4s var(--ease-liquid) forwards; }
+
+@keyframes fade-in-step {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
 
 .quest-sept-input {
   width: 100%; padding: 14px; margin: 14px 0; border-radius: 14px;
-  background: rgba(0, 0, 0, 0.3); border: 1.5px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.35); border: 1.5px solid rgba(255, 255, 255, 0.2);
   color: var(--gold-light); font-size: 18px; text-align: center; letter-spacing: 0.1em;
-  transition: border-color 0.3s;
+  transition: border-color 0.3s, box-shadow 0.3s, background-color 0.3s;
 }
-.quest-sept-input:focus { border-color: var(--gold-primary); }
+.quest-sept-input:focus { border-color: var(--gold-primary); box-shadow: 0 0 12px rgba(235, 212, 143, 0.3); }
+
+.quest-sept-input.is-error {
+  border-color: var(--overdue) !important;
+  background-color: rgba(255, 91, 82, 0.15) !important;
+  box-shadow: 0 0 15px rgba(255, 91, 82, 0.4) !important;
+  animation: shake-input 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes shake-input {
+  10%, 90% { transform: translate3d(-2px, 0, 0); }
+  20%, 80% { transform: translate3d(4px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+  40%, 60% { transform: translate3d(6px, 0, 0); }
+}
 
 .quest-sept-hint {
   font-family: var(--font-display); font-size: 28px; font-weight: 800;
   color: var(--gold-primary); margin: 16px 0; letter-spacing: 0.05em;
+  text-shadow: 0 0 16px rgba(235, 212, 143, 0.4);
 }
 
 .quest-sept-coord { font-family: monospace; font-size: 16px; color: var(--soon); margin-bottom: 16px; letter-spacing: 1px; }
 
-/* White Canvas */
+/* Canvas container and reactivity effects */
 .quest-sept-canvas-wrap {
-  width: 100%; max-width: 280px; aspect-ratio: 1/1; 
-  margin: 0 auto 16px; border-radius: 12px;
+  width: 100%; max-width: 290px; aspect-ratio: 1/1; 
+  margin: 0 auto 16px; border-radius: 18px;
   background: #ffffff;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 0 10px rgba(0,0,0,0.1);
   overflow: hidden; touch-action: none; position: relative;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
-.quest-sept-canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
+
+/* Aura reactivity effects (vibration limited to frame glow) */
+.quest-sept-canvas-wrap::before {
+  content: ""; position: absolute; inset: -4px; border-radius: 22px;
+  border: 2px solid var(--gold-primary); opacity: 0;
+  pointer-events: none; transition: opacity 0.3s ease;
+  z-index: 2;
+}
+
+.quest-sept-canvas-wrap[data-match-level="1"] {
+  border-color: rgba(235, 212, 143, 0.6);
+  box-shadow: 0 0 20px rgba(235, 212, 143, 0.3), inset 0 0 10px rgba(0,0,0,0.1);
+}
+.quest-sept-canvas-wrap[data-match-level="2"] {
+  border-color: rgba(235, 212, 143, 0.9);
+  box-shadow: 0 0 35px rgba(235, 212, 143, 0.6), 0 0 10px rgba(255, 250, 220, 0.8), inset 0 0 10px rgba(0,0,0,0.1);
+  animation: aura-glow-pulse 1.2s ease-in-out infinite alternate;
+}
+.quest-sept-canvas-wrap[data-match-level="3"] {
+  border-color: #ffffff;
+  box-shadow: 0 0 50px rgba(235, 212, 143, 0.95), 0 0 20px rgba(255, 255, 255, 1), inset 0 0 10px rgba(0,0,0,0.1);
+  animation: aura-vibrate-glow 0.15s infinite alternate;
+}
+
+@keyframes aura-glow-pulse {
+  from { box-shadow: 0 0 25px rgba(235, 212, 143, 0.4); }
+  to { box-shadow: 0 0 45px rgba(235, 212, 143, 0.8); }
+}
+
+@keyframes aura-vibrate-glow {
+  0% { box-shadow: 0 0 40px rgba(235, 212, 143, 0.8), 0 0 10px rgba(255, 255, 255, 0.8); }
+  100% { box-shadow: 0 0 60px rgba(235, 212, 143, 1), 0 0 25px rgba(255, 255, 255, 1); }
+}
+
+.quest-sept-canvas { display: block; width: 100%; height: 100%; cursor: crosshair; position: relative; z-index: 1; }
 
 .quest-sept-btn-group { display: flex; gap: 8px; margin-bottom: 12px; }
 .quest-sept-btn-group .quest-sept-btn { flex: 1; padding: 10px 4px; font-size: 12px; }
@@ -313,19 +367,52 @@ html, body{
 .quest-sept-btn {
   flex: 1; padding: 12px; border-radius: 12px; font-weight: 700; cursor: pointer;
   background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); color: var(--ink);
-  transition: background 0.2s, transform 0.1s;
+  transition: background 0.2s, transform 0.1s, opacity 0.3s;
 }
 .quest-sept-btn--primary { background: rgba(235, 212, 143, 0.2); border-color: var(--gold-primary); color: var(--gold-light); }
 .quest-sept-btn:active { transform: scale(0.96); }
 
 .quest-sept-error { color: var(--overdue); margin-top: 8px; font-size: 13px; font-weight: 600; display: none; }
 
-.quest-sept-final-symbol { color: var(--gold-primary); opacity: 0; transition: opacity 0.8s ease; margin: 0 auto; display: block; }
-.quest-sept-final-letter {
-  font-family: var(--font-display); font-size: 110px; font-weight: 800;
-  color: var(--gold-primary); line-height: 1; opacity: 0; transition: opacity 0.8s ease; display: none;
+/* Soft button fade-in animation */
+.btn-fade-enter {
+  animation: btn-soft-appear 0.6s var(--ease-liquid) forwards;
 }
-.quest-sept-final-text {
-  font-family: var(--font-display); font-size: 20px; color: var(--ink);
-  margin-top: 16px; opacity: 0; transition: opacity 1s ease; letter-spacing: 0.1em;
-   }
+@keyframes btn-soft-appear {
+  0% { opacity: 0; transform: translateY(12px) scale(0.95); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Final animation screen with particles */
+.quest-sept-final-wrap {
+  position: relative; width: 100%; min-height: 320px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+
+.quest-sept-gold-img {
+  width: 220px; height: 220px; object-fit: contain;
+  opacity: 0; transform: scale(0.85); filter: drop-shadow(0 0 0px rgba(235, 212, 143, 0));
+  transition: opacity 1s var(--ease-liquid), transform 1s var(--ease-liquid), filter 1s var(--ease-liquid);
+}
+
+.quest-sept-gold-img.is-visible {
+  opacity: 1; transform: scale(1);
+  filter: drop-shadow(0 0 25px rgba(235, 212, 143, 0.9)) drop-shadow(0 0 50px rgba(255, 215, 0, 0.6));
+}
+
+.quest-sept-particles-canvas {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none; z-index: 10;
+}
+
+.quest-sept-remember-text {
+  font-family: var(--font-display); font-size: 26px; font-weight: 700;
+  color: var(--gold-light); letter-spacing: 0.18em; text-transform: uppercase;
+  text-shadow: 0 0 20px rgba(235, 212, 143, 0.8), 0 0 40px rgba(235, 212, 143, 0.4);
+  opacity: 0; transform: translateY(10px);
+  transition: opacity 1.2s var(--ease-liquid), transform 1.2s var(--ease-liquid);
+}
+
+.quest-sept-remember-text.is-visible {
+  opacity: 1; transform: translateY(0);
+                              }
