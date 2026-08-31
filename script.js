@@ -1,11 +1,11 @@
 /* =========================================================
-   Квест-календарь годовщины — Логика + Сентябрьский квест
+   Anniversary Quest Calendar — Core Logic + September Quest
 ========================================================= */
 
 (function () {
   'use strict';
 
-  /* ---------- 1. ДАННЫЕ ---------- */
+  /* ---------- 1. DATA ---------- */
   var CYCLE_START_YEARS = [2026, 2027, 2028, 2029];
   var MONTH_SEQUENCE = [
     { name: 'Августа',   month: 7,  yearOffset: 0 },
@@ -49,7 +49,7 @@
   });
   TIMELINE.sort(function (a, b) { return a.date - b.date; });
 
-  /* ---------- 2. СОСТОЯНИЕ ---------- */
+  /* ---------- 2. STORAGE & SANITIZATION ---------- */
   var STORAGE_KEY = 'anniversaryQuest.completed.v1';
 
   function loadCompleted() {
@@ -78,7 +78,7 @@
   function isCompleted(id) { return !!completedMap[id]; }
   function markCompleted(id) { completedMap[id] = true; saveCompleted(completedMap); }
 
-  /* ---------- 3. СТАТУСЫ ---------- */
+  /* ---------- 3. STATUSES ---------- */
   function computeStatuses(now) {
     var statusById = {};
     var foundActive = false;
@@ -101,7 +101,7 @@
     return statusById;
   }
 
-  /* ---------- 4. РЕНДЕР И ЖИДКОЕ СТЕКЛО ---------- */
+  /* ---------- 4. RENDER ---------- */
   var grid = document.getElementById('questGrid');
   var cycleTitle = document.getElementById('cycleTitle');
   var prevBtn = document.getElementById('prevCycle');
@@ -213,11 +213,11 @@
   }
 
 
-  /* ---------- 5. СЕНТЯБРЬСКИЙ КВЕСТ (ЛОГИКА) ---------- */
+  /* ---------- 5. SEPTEMBER QUEST LOGIC ---------- */
   function mountSeptemberQuest(container) {
     container.innerHTML = `
       <div class="quest-sept-container">
-        <!-- Этап 1 -->
+        <!-- Step 1 -->
         <div id="sept-step-1" class="quest-sept-step is-active">
           <p class="quest-modal__text">Откройте сайт NextCubePro.com на компьютере.<br><br>Откройте инструменты разработчика (F12) и выполните указанное действие.<br><br>Действие: введите "gdjstwvwb"</p>
           <input type="text" id="sept-code-input" class="quest-sept-input" placeholder="Введите код" autocomplete="off" />
@@ -225,23 +225,22 @@
           <p id="sept-error" class="quest-sept-error">Неверный код, попробуйте снова</p>
         </div>
 
-        <!-- Этап 2 -->
+        <!-- Step 2 -->
         <div id="sept-step-2" class="quest-sept-step">
           <p class="quest-modal__text">Подсказка к физической записке:</p>
           <div class="quest-sept-hint">Lamborghini Urus</div>
           <button id="sept-found-btn" class="quest-sept-btn quest-sept-btn--primary" style="display:none; width:100%; margin-top:20px;">Я нашёл/нашла записку</button>
         </div>
 
-        <!-- Этап 3 -->
+        <!-- Step 3 -->
         <div id="sept-step-3" class="quest-sept-step">
           <div class="quest-sept-coord">37.401437, -116.867730</div>
-          <p class="quest-modal__text" style="font-size:14px; margin-bottom:15px;">Откройте координаты в Google Maps/Earth и нарисуйте найденную фигуру.</p>
+          <p class="quest-modal__text" style="font-size:14px; margin-bottom:12px;">Откройте координаты в Google Maps/Earth и нарисуйте найденную фигуру.</p>
           
           <div class="quest-sept-canvas-wrap">
             <canvas id="sept-canvas" class="quest-sept-canvas"></canvas>
           </div>
           
-          <!-- Новые кнопки истории -->
           <div class="quest-sept-btn-group">
             <button id="sept-canvas-undo" class="quest-sept-btn">Отменить</button>
             <button id="sept-canvas-redo" class="quest-sept-btn">Вернуть</button>
@@ -254,9 +253,9 @@
           <p id="sept-draw-error" class="quest-sept-error">Форма не распознана, попробуйте точнее</p>
         </div>
 
-        <!-- Этап 4 (Финал) -->
+        <!-- Step 4 (Final) -->
         <div id="sept-step-4" class="quest-sept-step" style="padding-top: 20px;">
-          <svg id="sept-symbol" class="quest-sept-final-symbol" viewBox="0 0 100 100" width="160" height="160">
+          <svg id="sept-symbol" class="quest-sept-final-symbol" viewBox="0 0 100 100" width="140" height="140">
             <circle cx="50" cy="50" r="48" fill="none" stroke="currentColor" stroke-width="2.5"/>
             <path d="M 6 50 Q 50 15 94 50 Q 50 85 6 50" fill="none" stroke="currentColor" stroke-width="2.5"/>
             <path d="M 50 2 L 25 30 L 75 30 Z" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -298,15 +297,15 @@
       initCanvas();
     });
 
-    // Логика Этапа 3 (Холст с Историей и Распознаванием)
+    // Canvas Logic
     var canvas, ctx, isDrawing = false;
-    var strokes = []; // Массив всех штрихов
-    var redoStrokes = []; // Отмененные штрихи
-    var currentStroke = null; // Текущая линия, которую рисуем
+    var strokes = [];
+    var redoStrokes = [];
+    var currentStroke = null;
 
     function redrawCanvas() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.strokeStyle = '#000000'; // Рисуем чёрной пастой
+      ctx.strokeStyle = '#000000';
       ctx.lineWidth = 4;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
@@ -330,7 +329,7 @@
       canvas.width = rect.width;
       canvas.height = rect.height;
       
-      redrawCanvas(); // Задать стили кисти при инициализации
+      redrawCanvas();
 
       function getPos(e) {
         var r = canvas.getBoundingClientRect();
@@ -344,7 +343,7 @@
         var p = getPos(e);
         currentStroke = [p];
         strokes.push(currentStroke);
-        redoStrokes = []; // Очищаем историю возвратов при новом рисовании
+        redoStrokes = [];
         
         ctx.beginPath(); ctx.moveTo(p.x, p.y);
       }
@@ -371,7 +370,6 @@
       canvas.addEventListener('mouseleave', endDraw);
     }
     
-    // Кнопка Отменить
     document.getElementById('sept-canvas-undo').addEventListener('click', function() {
       if(strokes.length > 0) {
         redoStrokes.push(strokes.pop());
@@ -380,7 +378,6 @@
       }
     });
 
-    // Кнопка Вернуть
     document.getElementById('sept-canvas-redo').addEventListener('click', function() {
       if(redoStrokes.length > 0) {
         strokes.push(redoStrokes.pop());
@@ -389,7 +386,6 @@
       }
     });
 
-    // Кнопка Очистить
     document.getElementById('sept-canvas-clear').addEventListener('click', function() {
       strokes = [];
       redoStrokes = [];
@@ -397,9 +393,7 @@
       document.getElementById('sept-draw-error').style.display = 'none';
     });
 
-    // Проверить фигуру
     document.getElementById('sept-canvas-submit').addEventListener('click', function() {
-      // Собираем все нарисованные точки в один массив для анализатора
       var flatPoints = [];
       strokes.forEach(function(s) { flatPoints = flatPoints.concat(s); });
       
@@ -413,9 +407,9 @@
     });
   }
 
-  // Алгоритм распознавания фигуры (Окружность + "Глаз" по центру + Лучи/Треугольники)
+  /* ---------- SHAPE RECOGNITION ALGORITHM (FLEXIBLE) ---------- */
   function checkShape(pointsArray, cWidth, cHeight) {
-    if (pointsArray.length < 20) return false;
+    if (!pointsArray || pointsArray.length < 15) return false;
 
     var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     pointsArray.forEach(function(p) {
@@ -424,44 +418,46 @@
     });
 
     var w = maxX - minX, h = maxY - minY;
-    // Фигура должна быть достаточно большой
-    if (w < cWidth * 0.4 || h < cHeight * 0.4) return false;
+    // Drawn figure must be at least 25% of canvas width & height
+    if (w < cWidth * 0.25 || h < cHeight * 0.25) return false;
 
-    // Создаем матрицу 10x10 для проверки распределения линий
+    // 8x8 Grid for spatial distribution
     var grid = [];
-    for (var i = 0; i < 10; i++) { grid[i] = [0,0,0,0,0,0,0,0,0,0]; }
+    for (var i = 0; i < 8; i++) { grid[i] = [0,0,0,0,0,0,0,0]; }
 
     pointsArray.forEach(function(p) {
-      var gx = Math.floor(((p.x - minX) / w) * 9.99);
-      var gy = Math.floor(((p.y - minY) / h) * 9.99);
+      var gx = Math.floor(((p.x - minX) / w) * 7.99);
+      var gy = Math.floor(((p.y - minY) / h) * 7.99);
       grid[gy][gx] = 1;
     });
 
     var totalFilled = 0;
-    var hasCenter = false, hasTop = false, hasBottom = false, hasLeft = false, hasRight = false;
+    var qTop = 0, qBottom = 0, qLeft = 0, qRight = 0, qCenter = 0;
 
-    for (var y = 0; y < 10; y++) {
-      for (var x = 0; x < 10; x++) {
+    for (var y = 0; y < 8; y++) {
+      for (var x = 0; x < 8; x++) {
         if (grid[y][x] === 1) {
           totalFilled++;
-          // Проверяем наличие штрихов в ключевых зонах фигуры
-          if (y >= 4 && y <= 5 && x >= 2 && x <= 7) hasCenter = true; // Центральный эллипс/глаз
-          if (y >= 0 && y <= 1 && x >= 3 && x <= 6) hasTop = true;    // Верхний край
-          if (y >= 8 && y <= 9 && x >= 3 && x <= 6) hasBottom = true; // Нижний край
-          if (x >= 0 && x <= 1 && y >= 3 && y <= 6) hasLeft = true;   // Левый край
-          if (x >= 8 && x <= 9 && y >= 3 && y <= 6) hasRight = true;  // Правый край
+          if (y <= 2) qTop++;
+          if (y >= 5) qBottom++;
+          if (x <= 2) qLeft++;
+          if (x >= 5) qRight++;
+          if (y >= 2 && y <= 5 && x >= 2 && x <= 5) qCenter++;
         }
       }
     }
 
-    // Защита от "просто закрасил весь холст"
-    if (totalFilled > 70) return false; 
-    
-    // Если есть рисунок во всех ключевых зонах, считаем распознанным
-    return hasCenter && hasTop && hasBottom && hasLeft && hasRight;
+    // Protection against scribbles or totally filled canvas
+    if (totalFilled > 52) return false; 
+
+    // Flexible criteria: Requires content in all 4 directions + central region
+    var coversAllOuterDirections = (qTop >= 1) && (qBottom >= 1) && (qLeft >= 1) && (qRight >= 1);
+    var hasCenterDetail = (qCenter >= 1);
+
+    return coversAllOuterDirections && hasCenterDetail;
   }
 
-  // Финальная секвенция с буквой S
+  // Final Sequence
   function runFinalSequence() {
     var symbol = document.getElementById('sept-symbol');
     var letter = document.getElementById('sept-letter');
@@ -494,7 +490,7 @@
   }
 
 
-  /* ---------- 6. ПОЛНОЭКРАННАЯ МОДАЛКА ---------- */
+  /* ---------- 6. MODAL ---------- */
   var modal = document.getElementById('questModal');
   var modalBackdrop = document.getElementById('questModalBackdrop');
   var modalClose = document.getElementById('questModalClose');
@@ -560,7 +556,7 @@
     renderGridContent(currentIndex);
   });
 
-  /* ---------- ЗАПУСК ---------- */
+  /* ---------- INIT ---------- */
   renderGridContent(0);
 
 })();
