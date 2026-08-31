@@ -214,6 +214,9 @@
 
 
   /* ---------- 5. SEPTEMBER QUEST LOGIC ---------- */
+  var septInterval = null;
+  var septInactivityTimer = null;
+
   function mountSeptemberQuest(container) {
     container.innerHTML = `
       <div class="quest-sept-container">
@@ -237,7 +240,7 @@
           <div class="quest-sept-coord">37.401437, -116.867730</div>
           <p class="quest-modal__text" style="font-size:14px; margin-bottom:12px;">Откройте координаты в Google Maps/Earth и нарисуйте найденную фигуру.</p>
           
-          <div class="quest-sept-canvas-wrap">
+          <div class="quest-sept-canvas-wrap" id="sept-canvas-wrap">
             <canvas id="sept-canvas" class="quest-sept-canvas"></canvas>
           </div>
           
@@ -247,24 +250,16 @@
             <button id="sept-canvas-clear" class="quest-sept-btn">Очистить</button>
           </div>
 
-          <div class="quest-sept-btn-row">
-            <button id="sept-canvas-submit" class="quest-sept-btn quest-sept-btn--primary" style="width: 100%;">Проверить</button>
-          </div>
           <p id="sept-draw-error" class="quest-sept-error">Форма не распознана, попробуйте точнее</p>
         </div>
 
-        <!-- Step 4 (Final) -->
-        <div id="sept-step-4" class="quest-sept-step" style="padding-top: 20px;">
-          <svg id="sept-symbol" class="quest-sept-final-symbol" viewBox="0 0 100 100" width="140" height="140">
-            <circle cx="50" cy="50" r="48" fill="none" stroke="currentColor" stroke-width="2.5"/>
-            <path d="M 6 50 Q 50 15 94 50 Q 50 85 6 50" fill="none" stroke="currentColor" stroke-width="2.5"/>
-            <path d="M 50 2 L 25 30 L 75 30 Z" fill="none" stroke="currentColor" stroke-width="2"/>
-            <path d="M 50 98 L 25 70 L 75 70 Z" fill="none" stroke="currentColor" stroke-width="2"/>
-            <path d="M 2 50 L 25 25 L 25 75 Z" fill="none" stroke="currentColor" stroke-width="2"/>
-            <path d="M 98 50 L 75 25 L 75 75 Z" fill="none" stroke="currentColor" stroke-width="2"/>
-          </svg>
-          <div id="sept-letter" class="quest-sept-final-letter">S</div>
-          <div id="sept-remember" class="quest-sept-final-text">Remember it.</div>
+        <!-- Step 4 (Final particle sequence) -->
+        <div id="sept-step-4" class="quest-sept-step">
+          <div class="quest-sept-final-wrap" id="sept-final-wrap">
+            <img id="sept-gold-img" class="quest-sept-gold-img" src="1000035695.png" alt="Символ" />
+            <canvas id="sept-particles-canvas" class="quest-sept-particles-canvas"></canvas>
+            <div id="sept-remember" class="quest-sept-remember-text">Remember it.</div>
+          </div>
         </div>
       </div>
     `;
@@ -273,8 +268,11 @@
     var codeSubmit = document.getElementById('sept-code-submit');
     var codeError = document.getElementById('sept-error');
 
-    codeSubmit.addEventListener('click', function() {
+    function handleCodeSubmit() {
       if (codeInput.value.trim().toUpperCase() === 'N7K4P9X2') {
+        codeInput.classList.remove('is-error');
+        codeError.style.display = 'none';
+        
         document.getElementById('sept-step-1').classList.remove('is-active');
         document.getElementById('sept-step-2').classList.add('is-active');
         
@@ -282,12 +280,20 @@
           var foundBtn = document.getElementById('sept-found-btn');
           if(foundBtn) {
             foundBtn.style.display = 'block';
-            foundBtn.style.animation = 'fade-in 0.4s ease forwards';
+            foundBtn.classList.add('btn-fade-enter');
           }
         }, 20000);
       } else {
+        codeInput.classList.remove('is-error');
+        void codeInput.offsetWidth; // Reflow trigger to restart animation
+        codeInput.classList.add('is-error');
         codeError.style.display = 'block';
       }
+    }
+
+    codeSubmit.addEventListener('click', handleCodeSubmit);
+    codeInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') handleCodeSubmit();
     });
 
     var foundBtn = document.getElementById('sept-found-btn');
@@ -297,15 +303,17 @@
       initCanvas();
     });
 
-    // Canvas Logic
+    /* ---------- CANVAS LOGIC & AUTO OCR ---------- */
     var canvas, ctx, isDrawing = false;
     var strokes = [];
     var redoStrokes = [];
     var currentStroke = null;
+    var canvasWrap = document.getElementById('sept-canvas-wrap');
+    var drawError = document.getElementById('sept-draw-error');
 
     function redrawCanvas() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.strokeStyle = '#000000';
+      ctx.strokeStyle = '#030612';
       ctx.lineWidth = 4;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
@@ -326,8 +334,8 @@
       ctx = canvas.getContext('2d');
       
       var rect = canvas.getBoundingClientRect();
-      canvas.width = rect.width;
-      canvas.height = rect.height;
+      canvas.width = rect.width || 280;
+      canvas.height = rect.height || 280;
       
       redrawCanvas();
 
@@ -340,10 +348,12 @@
 
       function startDraw(e) {
         e.preventDefault(); isDrawing = true;
+        resetInactivityTimer();
         var p = getPos(e);
         currentStroke = [p];
         strokes.push(currentStroke);
         redoStrokes = [];
+        drawError.style.display = 'none';
         
         ctx.beginPath(); ctx.moveTo(p.x, p.y);
       }
@@ -351,6 +361,7 @@
       function draw(e) {
         if (!isDrawing) return;
         e.preventDefault();
+        resetInactivityTimer();
         var p = getPos(e);
         currentStroke.push(p);
         ctx.lineTo(p.x, p.y); ctx.stroke();
@@ -359,6 +370,8 @@
       function endDraw(e) { 
         if(!isDrawing) return;
         e.preventDefault(); isDrawing = false; 
+        resetInactivityTimer();
+        evaluateCurrentDrawing();
       }
 
       canvas.addEventListener('touchstart', startDraw, {passive: false});
@@ -368,13 +381,72 @@
       canvas.addEventListener('mousemove', draw);
       canvas.addEventListener('mouseup', endDraw);
       canvas.addEventListener('mouseleave', endDraw);
+
+      // Auto-evaluation every 1 second
+      if (septInterval) clearInterval(septInterval);
+      septInterval = setInterval(function() {
+        evaluateCurrentDrawing();
+      }, 1000);
     }
-    
+
+    function resetInactivityTimer() {
+      if (septInactivityTimer) clearTimeout(septInactivityTimer);
+      
+      // 10-second inactivity timer
+      septInactivityTimer = setTimeout(function() {
+        var flatPoints = [];
+        strokes.forEach(function(s) { flatPoints = flatPoints.concat(s); });
+        
+        if (flatPoints.length > 10) {
+          var matchScore = evaluateShapeScore(flatPoints, canvas.width, canvas.height);
+          if (matchScore >= 0.60) {
+            triggerSuccessStep();
+          } else {
+            drawError.style.display = 'block';
+            canvasWrap.removeAttribute('data-match-level');
+          }
+        }
+      }, 10000);
+    }
+
+    function evaluateCurrentDrawing() {
+      var flatPoints = [];
+      strokes.forEach(function(s) { flatPoints = flatPoints.concat(s); });
+      if (flatPoints.length < 10) {
+        canvasWrap.removeAttribute('data-match-level');
+        return;
+      }
+
+      var matchScore = evaluateShapeScore(flatPoints, canvas.width, canvas.height);
+
+      if (matchScore >= 0.70) {
+        canvasWrap.setAttribute('data-match-level', '3');
+        // High accuracy — trigger transition instantly
+        setTimeout(triggerSuccessStep, 300);
+      } else if (matchScore >= 0.45) {
+        canvasWrap.setAttribute('data-match-level', '2');
+      } else if (matchScore >= 0.25) {
+        canvasWrap.setAttribute('data-match-level', '1');
+      } else {
+        canvasWrap.removeAttribute('data-match-level');
+      }
+    }
+
+    function triggerSuccessStep() {
+      if (septInterval) clearInterval(septInterval);
+      if (septInactivityTimer) clearTimeout(septInactivityTimer);
+      
+      document.getElementById('sept-step-3').classList.remove('is-active');
+      document.getElementById('sept-step-4').classList.add('is-active');
+      runFinalParticleSequence();
+    }
+
     document.getElementById('sept-canvas-undo').addEventListener('click', function() {
       if(strokes.length > 0) {
         redoStrokes.push(strokes.pop());
         redrawCanvas();
-        document.getElementById('sept-draw-error').style.display = 'none';
+        drawError.style.display = 'none';
+        evaluateCurrentDrawing();
       }
     });
 
@@ -382,7 +454,8 @@
       if(redoStrokes.length > 0) {
         strokes.push(redoStrokes.pop());
         redrawCanvas();
-        document.getElementById('sept-draw-error').style.display = 'none';
+        drawError.style.display = 'none';
+        evaluateCurrentDrawing();
       }
     });
 
@@ -390,26 +463,14 @@
       strokes = [];
       redoStrokes = [];
       redrawCanvas();
-      document.getElementById('sept-draw-error').style.display = 'none';
-    });
-
-    document.getElementById('sept-canvas-submit').addEventListener('click', function() {
-      var flatPoints = [];
-      strokes.forEach(function(s) { flatPoints = flatPoints.concat(s); });
-      
-      if (checkShape(flatPoints, canvas.width, canvas.height)) {
-        document.getElementById('sept-step-3').classList.remove('is-active');
-        document.getElementById('sept-step-4').classList.add('is-active');
-        runFinalSequence();
-      } else {
-        document.getElementById('sept-draw-error').style.display = 'block';
-      }
+      drawError.style.display = 'none';
+      canvasWrap.removeAttribute('data-match-level');
     });
   }
 
-  /* ---------- SHAPE RECOGNITION ALGORITHM (FLEXIBLE) ---------- */
-  function checkShape(pointsArray, cWidth, cHeight) {
-    if (!pointsArray || pointsArray.length < 15) return false;
+  /* ---------- ROBUST OCR SHAPE RECOGNITION ALGORITHM ---------- */
+  function evaluateShapeScore(pointsArray, cWidth, cHeight) {
+    if (!pointsArray || pointsArray.length < 12) return 0;
 
     var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     pointsArray.forEach(function(p) {
@@ -418,79 +479,202 @@
     });
 
     var w = maxX - minX, h = maxY - minY;
-    // Drawn figure must be at least 25% of canvas width & height
-    if (w < cWidth * 0.25 || h < cHeight * 0.25) return false;
+    // Minimum dimensions requirement
+    if (w < cWidth * 0.20 || h < cHeight * 0.20) return 0;
 
-    // 8x8 Grid for spatial distribution
+    // 10x10 Grid for spatial evaluation
+    var GRID_SIZE = 10;
     var grid = [];
-    for (var i = 0; i < 8; i++) { grid[i] = [0,0,0,0,0,0,0,0]; }
+    for (var i = 0; i < GRID_SIZE; i++) {
+      var row = [];
+      for (var j = 0; j < GRID_SIZE; j++) row.push(0);
+      grid.push(row);
+    }
 
     pointsArray.forEach(function(p) {
-      var gx = Math.floor(((p.x - minX) / w) * 7.99);
-      var gy = Math.floor(((p.y - minY) / h) * 7.99);
+      var gx = Math.floor(((p.x - minX) / w) * (GRID_SIZE - 0.01));
+      var gy = Math.floor(((p.y - minY) / h) * (GRID_SIZE - 0.01));
       grid[gy][gx] = 1;
     });
 
     var totalFilled = 0;
-    var qTop = 0, qBottom = 0, qLeft = 0, qRight = 0, qCenter = 0;
+    var topRay = 0, bottomRay = 0, leftRay = 0, rightRay = 0;
+    var centerZone = 0, innerEyeZone = 0;
 
-    for (var y = 0; y < 8; y++) {
-      for (var x = 0; x < 8; x++) {
+    for (var y = 0; y < GRID_SIZE; y++) {
+      for (var x = 0; x < GRID_SIZE; x++) {
         if (grid[y][x] === 1) {
           totalFilled++;
-          if (y <= 2) qTop++;
-          if (y >= 5) qBottom++;
-          if (x <= 2) qLeft++;
-          if (x >= 5) qRight++;
-          if (y >= 2 && y <= 5 && x >= 2 && x <= 5) qCenter++;
+          // Top and bottom rays
+          if (y <= 2 && x >= 3 && x <= 6) topRay++;
+          if (y >= 7 && x >= 3 && x <= 6) bottomRay++;
+          // Left and right rays
+          if (x <= 2 && y >= 3 && y <= 6) leftRay++;
+          if (x >= 7 && y >= 3 && y <= 6) rightRay++;
+          // Central area (eye / oval)
+          if (y >= 3 && y <= 6 && x >= 2 && x <= 7) centerZone++;
+          // Inner eye core
+          if (y >= 4 && y <= 5 && x >= 3 && x <= 6) innerEyeZone++;
         }
       }
     }
 
-    // Protection against scribbles or totally filled canvas
-    if (totalFilled > 52) return false; 
+    // Protection against scribbling the entire canvas
+    if (totalFilled > 62) return 0;
 
-    // Flexible criteria: Requires content in all 4 directions + central region
-    var coversAllOuterDirections = (qTop >= 1) && (qBottom >= 1) && (qLeft >= 1) && (qRight >= 1);
-    var hasCenterDetail = (qCenter >= 1);
+    // Calculate score match
+    var score = 0;
 
-    return coversAllOuterDirections && hasCenterDetail;
+    // 1. External rays presence (4 rays)
+    if (topRay >= 1) score += 0.20;
+    if (bottomRay >= 1) score += 0.20;
+    if (leftRay >= 1) score += 0.15;
+    if (rightRay >= 1) score += 0.15;
+
+    // 2. Center oval/eye structure
+    if (centerZone >= 3) score += 0.15;
+    if (innerEyeZone >= 1) score += 0.15;
+
+    // 3. Aspect ratio close to square
+    var aspectRatio = w / (h || 1);
+    if (aspectRatio >= 0.7 && aspectRatio <= 1.4) {
+      score += 0.10;
+    }
+
+    return Math.min(score, 1.0);
   }
 
-  // Final Sequence
-  function runFinalSequence() {
-    var symbol = document.getElementById('sept-symbol');
-    var letter = document.getElementById('sept-letter');
-    var remember = document.getElementById('sept-remember');
+  /* ---------- 6. FINAL ANIMATION & PARTICLES ---------- */
+  function runFinalParticleSequence() {
+    var img = document.getElementById('sept-gold-img');
+    var pCanvas = document.getElementById('sept-particles-canvas');
+    var rememberText = document.getElementById('sept-remember');
+    var wrap = document.getElementById('sept-final-wrap');
 
-    symbol.style.opacity = '1';
-    
+    if (!img || !pCanvas || !wrap) return;
+
+    var ctx = pCanvas.getContext('2d');
+    var width = pCanvas.width = wrap.clientWidth || 300;
+    var height = pCanvas.height = wrap.clientHeight || 300;
+
+    // Step 1: Reveal gold symbol image
     setTimeout(function() {
-      symbol.style.opacity = '0';
-      
-      setTimeout(function() {
-        symbol.style.display = 'none';
-        letter.style.display = 'block';
-        
-        setTimeout(function() { letter.style.opacity = '1'; }, 50);
+      img.classList.add('is-visible');
+    }, 100);
 
+    // Step 2 & 3: Symbol dissolves and breaks into particles
+    setTimeout(function() {
+      img.style.opacity = '0';
+      img.style.transform = 'scale(1.1) blur(6px)';
+
+      createParticleExplosion(ctx, width, height, function() {
+        // Step 4, 5, 6: Particles form letter S and fade away
         setTimeout(function() {
-          remember.style.opacity = '1';
-          
+          // Step 7: Fade in "Remember it."
+          rememberText.classList.add('is-visible');
+
+          // Auto-complete quest after 3.5 seconds
           setTimeout(function() {
             if (activeModalQuestId) {
               markCompleted(activeModalQuestId);
               closeQuestModal();
               renderGridContent(currentIndex);
             }
-          }, 3000);
-        }, 1500);
-      }, 800);
-    }, 2500);
+          }, 3500);
+        }, 1200);
+      });
+    }, 2400);
+  }
+
+  function createParticleExplosion(ctx, w, h, onComplete) {
+    var particles = [];
+    var count = 180;
+    var centerX = w / 2;
+    var centerY = h / 2 - 10;
+
+    // Generate points forming letter S
+    var sPoints = [];
+    for (var t = 0; t <= Math.PI * 2; t += 0.035) {
+      var x = Math.sin(t) * 38;
+      var y = -Math.sin(t * 2) * 45;
+      sPoints.push({ x: centerX + x, y: centerY + y });
+    }
+
+    for (var i = 0; i < count; i++) {
+      var angle = Math.random() * Math.PI * 2;
+      var speed = Math.random() * 6 + 2;
+      var target = sPoints[i % sPoints.length];
+
+      particles.push({
+        x: centerX + (Math.random() - 0.5) * 80,
+        y: centerY + (Math.random() - 0.5) * 80,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        targetX: target.x + (Math.random() - 0.5) * 6,
+        targetY: target.y + (Math.random() - 0.5) * 6,
+        size: Math.random() * 2.5 + 1.2,
+        color: Math.random() > 0.3 ? '#ebd48f' : '#ffffff',
+        alpha: 1,
+        state: 'explode' // 'explode' -> 'gather' -> 'fade'
+      });
+    }
+
+    var startTime = performance.now();
+
+    function animate(time) {
+      var elapsed = time - startTime;
+      ctx.clearRect(0, 0, w, h);
+
+      var allDone = true;
+
+      particles.forEach(function(p) {
+        if (p.state === 'explode') {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vx *= 0.92;
+          p.vy *= 0.92;
+
+          if (elapsed > 600) {
+            p.state = 'gather';
+          }
+        } else if (p.state === 'gather') {
+          p.x += (p.targetX - p.x) * 0.08;
+          p.y += (p.targetY - p.y) * 0.08;
+
+          if (elapsed > 2600) {
+            p.state = 'fade';
+          }
+        } else if (p.state === 'fade') {
+          p.alpha -= 0.02;
+          if (p.alpha < 0) p.alpha = 0;
+        }
+
+        if (p.alpha > 0) {
+          allDone = false;
+          ctx.save();
+          ctx.globalAlpha = p.alpha;
+          ctx.fillStyle = p.color;
+          ctx.shadowBlur = 10;
+          ctx.shadowColor = '#ebd48f';
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      });
+
+      if (!allDone) {
+        requestAnimationFrame(animate);
+      } else {
+        if (onComplete) onComplete();
+      }
+    }
+
+    requestAnimationFrame(animate);
   }
 
 
-  /* ---------- 6. MODAL ---------- */
+  /* ---------- 7. MODAL ---------- */
   var modal = document.getElementById('questModal');
   var modalBackdrop = document.getElementById('questModalBackdrop');
   var modalClose = document.getElementById('questModalClose');
@@ -530,7 +714,7 @@
         modalCompleteBtn.textContent = 'Дата еще не наступила';
         modalCompleteBtn.setAttribute('disabled', 'disabled');
       } else {
-        defaultText.textContent = 'Задание открыто. Исследуйте подсказки этого дня и отметьте этап пройденным после выполнения. Желаем успеха!';
+        defaultText.textContent = 'Задание открыто. Исследуйте подсказки этого дня и отметьте этап пройденным после выполнения. Желаем огромного успеха!';
         modalCompleteBtn.textContent = 'Отметить пройденным';
         modalCompleteBtn.removeAttribute('disabled');
       }
@@ -541,6 +725,9 @@
   }
 
   function closeQuestModal() {
+    if (septInterval) clearInterval(septInterval);
+    if (septInactivityTimer) clearTimeout(septInactivityTimer);
+    
     modal.classList.remove('is-open');
     modal.setAttribute('aria-hidden', 'true');
     activeModalQuestId = null;
